@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.Key;
@@ -21,6 +22,10 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import javax.xml.bind.DatatypeConverter;
 
 import org.bouncycastle.asn1.x500.X500Name;
@@ -33,8 +38,11 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
+import uniandes.gload.core.LoadGenerator;
+import uniandes.gload.core.Task;
 
-public class ClienteCon {
+
+public class ClienteCon{
 	
 	//Strings de los diferentes algoritmos
 	public static final String AES = "AES";
@@ -55,7 +63,6 @@ public class ClienteCon {
 	
 	KeyPair keys;
 		
-	
 	String[] algoritmos;
 	
 	PublicKey publicserverkey;
@@ -66,7 +73,13 @@ public class ClienteCon {
 	
 	byte[] hmacgenerado;
 	
-	public ClienteCon(String host, int puerto) {
+	
+	//TODO CAMBIO
+	private static LoadGenerator spammer;
+	private int id;
+	
+	
+	public ClienteCon(String host, int puerto, int pid){
 		
 		KeyPairGenerator genllaves;
 		try {
@@ -77,9 +90,9 @@ public class ClienteCon {
 			out = new PrintWriter(socket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			consola = new BufferedReader(new InputStreamReader(System.in));
-			//certFact = new NovasoftCertificate();
 			algoritmos = new String[3];	
 			algoritmos[1] = RSA;
+			id = pid;
 		}catch(Exception e) {
 			System.out.println("Erorr :" +e.getMessage());
 			e.printStackTrace();
@@ -94,77 +107,13 @@ public class ClienteCon {
 	}
 
 	//Menú para la selección de los algorimos Simétricos y de HMAC que se van a usar en la sesión
+	//TODO CAMBIOS
 	private String configurarAlgoritmos() {
 		
-		String mensaje = "ALGORITMOS";
-		boolean selected = false;
-		//Seleccionador de algoritmo Simétrico
-		while(!selected) {
-			System.out.println("Seleccionar Algoritmo Simétrico");
-			System.out.println("1: AES");
-			System.out.println("2: Blowfish");
-			try {
-				String algo = consola.readLine();
-				int algoo = Integer.parseInt(algo);
-				switch(algoo) {
-				case 1:
-					mensaje=mensaje+SEP+AES;
-					algoritmos[0] = AES;
-					selected = true;
-					break;
-				case 2:
-					mensaje=mensaje+SEP+BLOWFISH;
-					algoritmos[0] = BLOWFISH;
-					selected = true;
-					break;
-				}
-
-			}catch(Exception e) {
-				System.out.println("Selección no válida");
-			}
-		}
-		
-		//Para todo caso el asimétrico es RSA
-		mensaje=mensaje+SEP+RSA;
-		
-		selected = false;
-		//Seleciconador de Algoritmo de HMAC
-		while(!selected) {
-			System.out.println("Seleccionar Algoritmo Simétrico");
-			System.out.println("1: SHA1");
-			System.out.println("2: SHA256");
-			System.out.println("3: SHA384");
-			System.out.println("4: SHA512");
-			try {
-				String algo = consola.readLine();
-				int algoo = Integer.parseInt(algo);
-				switch(algoo) {
-				case 1:
-					mensaje=mensaje+SEP+HMACSHA1;
-					algoritmos[2] = HMACSHA1;
-					selected = true;
-					break;
-				case 2:
-					mensaje=mensaje+SEP+HMACSHA256;
-					algoritmos[2] = HMACSHA256;
-					selected = true;
-					break;
-				case 3:
-					mensaje=mensaje+SEP+HMACSHA384;
-					algoritmos[2] = HMACSHA384;
-					selected = true;
-					break;
-				case 4:
-					mensaje=mensaje+SEP+HMACSHA512;
-					algoritmos[2] = HMACSHA512;
-					selected = true;
-					break;
-				}
-
-			}catch(Exception e) {
-				System.out.println("Selección no válida");
-			}
-		}
+		//Siempre envía el mismo algoritmo para ahorrar tiempo
+		String mensaje = "ALGORITMOS"+SEP+AES+SEP+RSA+SEP+HMACSHA256;
+		algoritmos[0] = AES;
+		algoritmos[2] = HMACSHA256;
 		return mensaje;
 	}
 	
@@ -233,6 +182,20 @@ public class ClienteCon {
 			return null;
 		}
 	}
+	
+	public double getSystemCpuLoad() throws Exception {
+		MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+		ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
+		AttributeList list = mbs.getAttributes(name, new String[]{ "SystemCpuLoad" });
+		if (list.isEmpty()) return Double.NaN;
+		Attribute att = (Attribute)list.get(0);
+		Double value = (Double)att.getValue();
+		// usually takes a couple of seconds before we get real values
+		if (value == -1.0) return Double.NaN;
+		// returns a percentage value with 1 decimal point precision
+		return ((int)(value * 1000) / 10.0);
+		}
+	
 	
 	//Generador de Certificado en x509 v3
 	public Certificate generarcertificado() throws OperatorCreationException, CertificateException {
@@ -350,14 +313,17 @@ public class ClienteCon {
 	}
 	
 	//PROTOCOLO
+	//TODO CAMBIOS
 	public void ejecutar() throws ProtocoloException{
 		String rtaserver = "";
 		String rtacliente = "";
-		
-		System.out.println("----Caso 2 Infracomp-----");
+		String datosaserver = "";
+		System.out.println("----Caso 3 Infracomp-----");
 		System.out.println("CLIENTE: HOLA");
 		out.println("HOLA");
 		try {
+			
+			//TODO CAMBIOS
 			
 			//Primer Saludo
 			rtaserver = recibirservidor();
@@ -378,15 +344,19 @@ public class ClienteCon {
 			publicserverkey = certirecibido.getPublicKey();
 			
 			//Envía y genera la llave simétrica
+			//Desde aquí agarra el tiempo
+			double inic = System.currentTimeMillis(); 
+			
 			System.out.println("Enviando llaves");
 			enviarllave();
 			rtaserver = recibirservidor();
 			verificarllaves(rtaserver);
 
 			//Permite que el usuario ingrese los datos por consola
+			//TODO CAMBIO Envia cualquier cosa
 			System.out.println("Envíe los Datos: Ej: 15;41 24.2028,2 10.4418 ");
-			rtacliente = consola.readLine();
-			
+			//rtacliente = consola.readLine();
+			rtacliente = "15;41 24.2028,2 10.4418";
 			//Envía los datos y el Hash
 			enviardatos(rtacliente);
 			enviarhmac(rtacliente);
@@ -400,12 +370,12 @@ public class ClienteCon {
 			System.out.println("Mensaje correctamente recibido");
 			}else System.out.println("El mensaje no se recibió correctamente");
 			
-			//Cierra todo y le gasta polas a los monitores
-			consola.close();
-			socket.close();
-			out.close();
-			in.close();
-
+			//Aquí se recibio
+			//TODO CAMBIOS
+			Double time = System.currentTimeMillis() - inic;
+			Double usocpu = getSystemCpuLoad();
+			rtacliente = (time + ";"+usocpu);
+			out.println(rtacliente);
 			
 		}catch(IOException e) {
 			e.printStackTrace();
@@ -413,24 +383,32 @@ public class ClienteCon {
 			e.printStackTrace();
 		} catch (CertificateException e) {
 			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		Medidas.darMedidas(20);
+		
 	}
 
 	//El maaaaain xd
 	public static void main(String[] args) {
 
 		//Cambiar Puerto Aquí
-		ClienteCon client = new ClienteCon("localhost", 6969);
+		//ClienteCon client = new ClienteCon("localhost", 6969,0);
 		//Sí se está usando BouncyCastle
 		Security.addProvider(new BouncyCastleProvider());
 		
-		try {
+		Task work =  new ElTask();
+		spammer = new LoadGenerator("TRIAL", 20, work, 20);
+		spammer.generate();
+		
+		/*try {
 			client.ejecutar();
 		}catch(ProtocoloException e) {
 			e.printStackTrace();
-		}
+		}*/
 
 	}
-	
 
 }

@@ -14,6 +14,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
+import caso3.Medidas;
+
 public class D extends Thread {
 
 	public static final String OK = "OK";
@@ -33,7 +35,13 @@ public class D extends Thread {
 	private static X509Certificate certSer;
 	private static KeyPair keyPairServidor;
 	
+	//TODO CAMBIOS
+	public boolean alive;
+	public double tiempo;
+	public double usocpu;
+	
 	public D (Socket csP, int idP) {
+		alive = true;
 		sc = csP;
 		dlg = new String("delegado " + idP + ": ");
 		try {
@@ -163,8 +171,19 @@ public class D extends Thread {
 					throw new Exception(dlg + "Error en verificacion de integridad. -terminando.");
 				}
 				
-		        sc.close();
+				/*** Fase 9: *****/
+				//TODO CAMBIOS 
+				linea = dc.readLine();
+				String[] medidas = linea.split(";");
+				tiempo = Double.parseDouble(medidas[0]);
+				usocpu = Double.parseDouble(medidas[1]);
+				System.out.println(dlg+linea);
+				
+		        //sc.close();
 		        System.out.println(dlg + "Termino exitosamente.");
+				Medidas.almacenar(tiempo,usocpu);
+		        //TODO CAMBIOS
+		        alive = false;
 				
 	        } catch (Exception e) {
 	          e.printStackTrace();
@@ -177,6 +196,14 @@ public class D extends Thread {
 
 	public static byte[] toByteArray(String s) {
 	    return DatatypeConverter.parseHexBinary(s);
+	}
+	
+	public double getTiempo() {
+		return tiempo;
+	}
+	
+	public double getMedidas() {
+		return usocpu;
 	}
 	
 }
